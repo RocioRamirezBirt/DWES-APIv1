@@ -1,7 +1,9 @@
 <?php                                
         //requerir el fichero router
+        
         require '../core/Router.php';
         require '../app/controllers/Post.php';
+        
 
        //instancia de la clase router
        $router = new Router();
@@ -13,15 +15,34 @@
 
     /************************definir las rutas********************************************/
 
-    $router->add('/public',array(
-        'controller' => 'Home',
-        'action' => 'index'
+    $router->add('/public/post/get',array(
+        'controller' => 'Post',
+        'action' => 'getAllPosts'
     ));
 
-    $router -> add('/public/post/new',array(
+    $router->add('/public/post/get/{id}',array(
         'controller' => 'Post',
-        'action' => 'new'
+        'action' => 'getPostById'
     ));
+
+    $router->add('/public/post/create',array(
+        'controller' => 'Post',
+        'action' => 'createPost'
+    ));
+
+    $router->add('/public/post/update/{id}',array(
+        'controller' => 'Post',
+        'action' => 'updatePost'
+    ));
+
+    $router->add('/public/post/delete/{id}',array(
+        'controller' => 'Post',
+        'action' => 'deletePost'
+    ));
+
+
+
+
 
     //pintar por pantalla las rutas que nos devuelve el enrutador metodo getRoutes()
 
@@ -62,21 +83,59 @@ $urlArray = array (
         $urlArray['action'] = 'index';
     }
 
-    // LLamar a la funcion de match para pasarle la url
-    if($router->match($urlArray)){
-                                        //aqui se llama al controlador y al metodo que nos interesa cargar en funcion de lo que nos llega por la URL
-        $controller= $router->getParams()['controller'];
-        $action = $router->getParams()['action'];                                        
+    echo '<pre>';
+    print_r($urlArray) . '<br>';
+    echo '</pre>';
 
-        $controller = new $controller(); //la variable controller ahora es de tipo POST 
-        $controller -> $action();
 
-    }else { // Si no hay match
+    //MOSTRAMOS LAS RUTAS
+
+    if($router->matchRoutes($urlArray)){
+
+
+
+         // SABER QUE METODO HTTP ESTA UTILIZANDO EL CLIENTE
+         $method = $_SERVER['REQUEST_METHOD'];
+
+        // ARRAY DE PARAMETROS
+        $params = [];
+
+        // ESTRUCTURA ITERATIVA
+        if($method === 'GET'){
+            $params[]=intval($urlArray['params']) ?? null; //intval
+    
+        }elseif($method === 'POST') {
+    
+            $json = file_get_contents('php://input');  // Leer el cuerpo de la solicitud como JSON
+            $params[]=json_decode($json,true); // Decodificar el JSON y añadir al array $params
+        }elseif($method === 'PUT') {
+            
+            $id=intval($urlArray['params']) ?? null;  // Convertir a entero y asignar a $id
+            $json = file_get_contents('php://input'); // Leer el cuerpo de la solicitud como JSON
+            $params[]=$id;  // Añadir $id al array $params
+            $params[]=json_decode($json,true); // Decodificar el JSON y añadir al array $params
+    
+        }elseif($method === 'DELETE'){
+            $params[]=intval($urlArray['params']) ?? null; //intval
+        }
+
+         //aqui se llama al controlador y al metodo que nos interesa cargar en funcion de lo que nos llega por la URL
+         $controller= $router->getParams()['controller'];
+         $action = $router->getParams()['action']; 
+         $controller = new $controller(); //la variable controller ahora es de tipo POST 
+
+         // Se verifica si el método especificado existe en el controlador
+
+        if(method_exists($controller, $action)){
+            // Se llama al método del controlador y se le pasan los parámetros
+            $resp = call_user_func_array([$controller,$action], $params);
+        }else{
+            // Si el método no existe en el controlador, se muestra un mensaje de error
+            echo 'el metodo no existe';
+        }
+    }else{
         echo "No route found by URL" .$url;
     }
 
-//  esto es para pintar en pantalla
-      echo '<pre>';
-        print_r($urlArray) . ' <br>';
-      echo '</pre>';
+
 ?>
